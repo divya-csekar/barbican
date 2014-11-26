@@ -26,7 +26,9 @@ from barbican.model import repositories as repo
 from barbican.openstack.common import gettextutils as u
 from barbican.plugin import resources as plugin
 from barbican.plugin import util as putil
-
+# - bluechip <
+from boat.attestation import attest_manager
+# - bluechip >
 
 LOG = utils.getLogger(__name__)
 
@@ -293,6 +295,11 @@ class SecretsController(object):
             new_secret.id
         )
         url = hrefs.convert_secret_to_href(new_secret.id)
+
+        # - bluechip <
+        attest_plugin = attest_manager._AttestManager()
+        # - bluechip >
+        
         LOG.debug('URI to secret is %s', url)
         if transport_key_model is not None:
             tkey_url = hrefs.convert_transport_key_to_href(
