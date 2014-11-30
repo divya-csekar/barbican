@@ -10,22 +10,6 @@ from requests import exceptions as request_exceptions
 CONF = cfg.CONF
 DEFAULT_PLUGIN_NAMESPACE = 'boat.attestation.plugin'
 DEFAULT_PLUGINS = ['simple_attest']
-OAT_IP=""
-OAT_PORT=""
-'''
-attestation_opt_group = cfg.OptGroup(name='attestation',
-                                title='Attestation Plugin Options')
-attestation_opts = [
-    cfg.StrOpt('namespace',
-               default=DEFAULT_PLUGIN_NAMESPACE
-               ),
-    cfg.MultiStrOpt('enabled_attestation_plugins',
-                    default=DEFAULT_PLUGINS
-                    )
-]
-CONF.register_group(attestation_opt_group)
-CONF.register_opts(attestation_opts, group=attestation_opt_group)
-'''
 
 class AttestPluginBase(object):
     """Implementation of the attestation plugin base"""

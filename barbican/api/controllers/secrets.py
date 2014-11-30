@@ -28,6 +28,12 @@ from barbican.plugin import resources as plugin
 from barbican.plugin import util as putil
 # - bluechip <
 from boat.attestation import attest_manager
+from boat.attestation import simple_attest
+from Crypto.PublicKey import RSA
+from Crypto.Cipher import PKCS1_v1_5
+from Crypto.Cipher import PKCS1_OAEP
+from pprint import pprint
+import base64
 # - bluechip >
 
 LOG = utils.getLogger(__name__)
@@ -94,7 +100,16 @@ class SecretController(object):
         if not secret:
             _secret_not_found()
 
-        if controllers.is_json_request_accept(pecan.request):
+        # - bluechip <
+        req = pecan.request
+        aikval = None
+        headerfields = vars(req.headers).get('environ')
+        aikkey = 'HTTP_AIK'
+        if aikkey in headerfields.keys():
+            aikval = headerfields.get('HTTP_AIK')
+        # - bluechip >
+
+        if controllers.is_json_request_accept(req):
             # Metadata-only response, no secret retrieval is necessary.
             pecan.override_template('json', 'application/json')
             secret_fields = putil.mime_types.augment_fields_with_content_types(
@@ -122,12 +137,33 @@ class SecretController(object):
                     suppress_exception=True)
                 transport_key = transport_key_model.transport_key
 
-            return plugin.get_secret(pecan.request.accept.header_value,
+            # - bluechip <
+            secretval = plugin.get_secret(pecan.request.accept.header_value,
                                      secret,
                                      project,
                                      self.repos,
                                      twsk,
                                      transport_key)
+            if (aikval!=None):
+                bindkey = None
+                attester = simple_attest.SimpleAttestPlugin(aikval)
+                if (attester.checkAttribute()):
+                    bindkey = attester.attestRequest()
+                if (bindkey!=None):
+                    # using local pub because OAT saml has not been updated
+                    keyfile = r"/home/dc/bindpubkey.pub"
+                    kin = open(keyfile,"r").read()
+
+                    rsakey = RSA.importKey(kin)
+                    rsakey1 = PKCS1_OAEP.new(rsakey)
+                    encrypted_secret = rsakey1.encrypt(secretval)
+                    secretval = encrypted_secret
+                else: 
+                    secretval = u"You are not authorized"
+            
+            # - bluechip >
+
+            return secretval
 
     @index.when(method='PUT')
     @allow_all_content_types
@@ -295,10 +331,6 @@ class SecretsController(object):
             new_secret.id
         )
         url = hrefs.convert_secret_to_href(new_secret.id)
-
-        # - bluechip <
-        attest_plugin = attest_manager._AttestManager()
-        # - bluechip >
         
         LOG.debug('URI to secret is %s', url)
         if transport_key_model is not None:

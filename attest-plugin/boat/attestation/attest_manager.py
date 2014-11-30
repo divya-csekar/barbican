@@ -23,14 +23,3 @@ class _AttestManager(named.NamedExtensionManager):
         )
 
 PLUGIN_MANAGER = _AttestManager()
-
-"""
-            conf.attestation.namespace,
-            conf.attestation.enabled_attestation_plugins,
-            invoke_on_load=invoke_on_load,
-            invoke_args=invoke_args,
-            invoke_kwds=invoke_kwargs
-        )
-
-PLUGIN_MANAGER = _AttestManager()
-"""
