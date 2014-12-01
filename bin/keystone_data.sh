@@ -9,7 +9,7 @@
 # alternately export values for
 export OS_AUTH_URL="http://localhost:5000/v2.0"
 # your secret password
-export OS_PASSWORD="password"
+export OS_PASSWORD="bluechip"
 export OS_TENANT_NAME="service" 
 export OS_USERNAME="nova" 
 

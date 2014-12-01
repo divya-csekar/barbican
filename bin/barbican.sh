@@ -100,7 +100,7 @@ install_barbican()
     fi
 
     # Run unit tests
-    python setup.py testr
+    #python setup.py testr
 
     start_barbican
 }
