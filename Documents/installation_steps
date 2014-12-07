@@ -1,0 +1,52 @@
+Installing Barbican:
+1. Refer link : https://github.com/cloudkeep/barbican/wiki/Barbican-Quick-Start-Guide
+
+
+##############################################################################################################################
+
+Installing Keystone
+
+1. git clone git://github.com/openstack-dev/devstack.git
+2. cd <devstack-home>
+3. ./stack.sh
+   Same password when asked: “bluechip”
+4. ./rejoin-stack.sh
+5. <devstack-home>/unstack.sh
+
+Run Keystone: 
+
+1. /opt/stack/keystone/bin/keystone-all --verbose --debug
+
+2. cd <devstack-home>
+3. source openrc nova service    // this sets up environment variables
+4. Update keystone_data.sh
+   OS_PASSWORD=bluechip
+
+
+##############################################################################################################################
+
+Attestation Plugin
+
+1. Install stevedore
+   sudo pip install stevedore
+
+2. Copy attest-plugin/boat files from “attest-plugin” branch to ~/.pyenv/versions/barbican27/lib/python2.7/site-packages/ and install the package there using command- python setup.py install
+
+3. Append the /etc/barbican/barbican-api.conf file with new plugin namespace- 
+# ================= Attestation plugin ===================
+[attester]
+namespace = boat.attestation.attester
+enabled_attester_plugins = simple_attest
+
+
+##############################################################################################################################
+
+Barbican UWSGI with NGINX Server for SSL
+
+Steps to be taken: - 
+1. https://github.com/cloudkeep/barbican/wiki/Deploy-OpenStack-Barbican-with-Nginx-web-server
+2. https://www.digitalocean.com/community/tutorials/how-to-create-an-ssl-certificate-on-nginx-for-ubuntu-14-04
+3. For troubleshooting, add this in /etc/nginx/uwsgi_params - https://bitbucket.org/akorn/wheezy.web/issue/2/keyerror-script_name-nginx-uwsgi
+4. Also, in pyenv shell barbican, run -> export hostname=localhost
+5. sudo service nginx restart
+6. bin/barbican.sh start
