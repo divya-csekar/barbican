@@ -12,7 +12,7 @@ export OS_AUTH_URL="http://localhost:5000/v2.0"
 
 export OS_PASSWORD="bluechip"
 export OS_TENANT_NAME="service" 
-export OS_USERNAME="nova" 
+export OS_USERNAME="admin" 
 
 # --------------------------------
 # alternately service_token and endpoint

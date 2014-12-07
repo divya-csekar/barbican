@@ -26,6 +26,15 @@ from barbican.model import repositories as repo
 from barbican.openstack.common import gettextutils as u
 from barbican.plugin import resources as plugin
 from barbican.plugin import util as putil
+# - bluechip <
+from boat.attestation import attest_manager
+from boat.attestation import simple_attest
+from Crypto.PublicKey import RSA
+from Crypto.Cipher import PKCS1_v1_5
+from Crypto.Cipher import PKCS1_OAEP
+from pprint import pprint
+import base64
+# - bluechip >
 
 
 LOG = utils.getLogger(__name__)
@@ -38,6 +47,23 @@ def allow_all_content_types(f):
                                 for value in mimetypes.types_map.values())
     return f
 
+# - bluechip <
+def _encryption_failed():
+    """Throw exception indicating secret cannot be retrieved."""
+    pecan.abort(500, u._('Key Wrapping with BindPubKey failed '))
+
+def _invalid_aik():
+    """Throw exception indicating secret cannot be retrieved."""
+    pecan.abort(400, u._('Secret requested with Invalid AIK '))
+
+def _attestation_failed():
+    """Throw exception indicating secret cannot be retrieved."""
+    pecan.abort(401, u._('Attestation failed for AIK '))
+
+def _oat_server_not_reachable():
+    """Throw exception indicating secret cannot be retrieved."""
+    pecan.abort(503, u._('Unable to connect to Internal attestation server'))
+# - bluechip >
 
 def _secret_not_found():
     """Throw exception indicating secret not found."""
@@ -92,6 +118,24 @@ class SecretController(object):
         if not secret:
             _secret_not_found()
 
+        # - bluechip <
+        req = pecan.request
+        aikval = None
+        headerfields = vars(req.headers).get('environ')
+        aikkey = 'HTTP_AIK'
+        attest_requested = False
+        if aikkey in headerfields.keys():
+            aikval = headerfields.get('HTTP_AIK')
+            attester = simple_attest.SimpleAttestPlugin(aikval)
+            #Exception for Invalid AIK
+            if (attester.checkAttribute()):
+                attest_requested = True
+                bindkey = None
+            else:
+                _invalid_aik()
+
+        # - bluechip >
+
         if controllers.is_json_request_accept(pecan.request):
             # Metadata-only response, no secret retrieval is necessary.
             pecan.override_template('json', 'application/json')
@@ -120,12 +164,35 @@ class SecretController(object):
                     suppress_exception=True)
                 transport_key = transport_key_model.transport_key
 
-            return plugin.get_secret(pecan.request.accept.header_value,
+            # - bluechip <
+            secretval = plugin.get_secret(pecan.request.accept.header_value,
                                      secret,
                                      project,
                                      self.repos,
                                      twsk,
                                      transport_key)
+            #return secretval
+            if (attest_requested == True):
+                print "\n\n\n\nCalling attest plugin\n\n\n\n"
+                bindkey = attester.attestRequest()
+                if (bindkey == "503"):
+                    _oat_server_not_reachable()
+                elif (bindkey == "401"):
+                    _attestation_failed()
+                elif (bindkey!=None):
+                    try: 
+                        rsakey = RSA.importKey(bindkey)
+                        rsakey = PKCS1_OAEP.new(rsakey)
+                        encrypted_secret = rsakey.encrypt(secretval)
+                        secretval = encrypted_secret
+                    except Exception,e:
+                        _encryption_failed()
+                else:
+                    _encryption_failed()
+            return secretval
+
+            # - bluechip >
+
 
     @index.when(method='PUT')
     @allow_all_content_types

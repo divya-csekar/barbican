@@ -20,7 +20,7 @@ An implementation of the SecretStore that uses the KMIP backend.
 from kmip.services import kmip_client
 
 import base64
-from pprint import pprint
+
 from kmip.core import enums
 from kmip.core.factories import attributes
 from kmip.core.factories import credentials
@@ -36,7 +36,7 @@ LOG = logging.getLogger(__name__)
 from oslo.config import cfg
 
 CONF = cfg.CONF
-print cfg.CONF
+print "hola mundo"
 kmip_opt_group = cfg.OptGroup(name='kmip_plugin', title='KMIP Plugin')
 kmip_opts = [
     cfg.StrOpt('username',
@@ -44,7 +44,7 @@ kmip_opts = [
                help=u._('The default username for authenticating with KMIP')
                ),
     cfg.StrOpt('password',
-               default='passwordfeliz',
+               default='password',
                help=u._('The default password for authenticating with KMIP')
                ),
     cfg.StrOpt('host',
@@ -52,7 +52,7 @@ kmip_opts = [
                help=u._('Address of the KMIP server')
                ),
     cfg.StrOpt('port',
-               default='4004',
+               default='9090',
                help=u._('Port for the KMIP server'),
                ),
     cfg.StrOpt('ssl_version',
@@ -84,7 +84,7 @@ class KMIPSecretStore(ss.SecretStoreBase):
         and pyKMIP enum values. Initializes the KMIP client with credentials
         needed to connect to the KMIP server.
         """
-	print "KMIPSecretStore is called"
+	print "Inicializa aca"
         super(KMIPSecretStore, self).__init__()
         self.valid_alg_dict = {
             ss.KeyAlgorithm.AES: {
@@ -110,16 +110,10 @@ class KMIPSecretStore(ss.SecretStoreBase):
             credential_value)
         self.client = kmip_client.KMIPProxy(
             host=conf.kmip_plugin.host,
-            port=8443,
-            ssl_version=conf.kmip_plugin.ssl_version,
-            #ca_certs=conf.kmip_plugin.ca_certs)
-	    ca_certs="/home/dc/KMIPCredentials/ca.crt",
-		username=conf.kmip_plugin.username,
-		password=conf.kmip_plugin.password)
-	print "Username readed "+conf.kmip_plugin.username
-	print "Password readed "+conf.kmip_plugin.password
-        print "Host :"+conf.kmip_plugin.host
-        
+            #port=int(conf.kmip_plugin.port),
+            port=8443
+	    ssl_version=conf.kmip_plugin.ssl_version,
+            ca_certs=conf.kmip_plugin.ca_certs)
 
     def generate_symmetric_key(self, key_spec):
         """Generate a symmetric key.
@@ -131,7 +125,7 @@ class KMIPSecretStore(ss.SecretStoreBase):
         :returns: dictionary holding key_id returned by server
         :raises: SecretGeneralException, SecretAlgorithmNotSupportedException
         """
-	print "CALLING GENERATE SYMETRIC KEY"
+	print "GOOOOOL"
         LOG.debug("Starting symmetric key generation with KMIP plugin")
         if not self.generate_supports(key_spec):
             raise ss.SecretAlgorithmNotSupportedException(
@@ -186,10 +180,8 @@ class KMIPSecretStore(ss.SecretStoreBase):
         :returns: Dictionary holding the key_uuid assigned by KMIP
         :raises: SecretGeneralException, SecretAlgorithmNotSupportedException
         """
-        print "CALLING STORE SECRET"
-
+	print "GOOOL 2"
         LOG.debug("Starting secret storage with KMIP plugin")
-
         if not self.store_secret_supports(secret_dto.key_spec):
             raise ss.SecretAlgorithmNotSupportedException(
                 secret_dto.key_spec.alg)
@@ -224,7 +216,10 @@ class KMIPSecretStore(ss.SecretStoreBase):
         try:
             self.client.open()
             LOG.debug("Opened connection to KMIP client for secret storage")
-	    result = self.client.register(object_type, template_attribute, secret, self.credential)   
+            result = self.client.register(object_type,
+                                          template_attribute,
+                                          secret,
+                                          self.credential)
         except Exception as e:
             LOG.exception("Error opening or writing to client")
             raise ss.SecretGeneralException(str(e))
@@ -239,10 +234,6 @@ class KMIPSecretStore(ss.SecretStoreBase):
             self.client.close()
             LOG.debug("Closed connection to KMIP client for secret storage")
 
-    def __str__(self):
-    	from pprint import pprint
-    	return str(vars(self))
-
     def get_secret(self, secret_metadata):
         """Gets a secret
 
@@ -251,8 +242,6 @@ class KMIPSecretStore(ss.SecretStoreBase):
         :returns: SecretDTO of the retrieved Secret
         :raises: SecretGeneralException
         """
-        print "CALLING GET SECRET!!!!!"
-
         LOG.debug("Starting secret retrieval with KMIP plugin")
         uuid = str(secret_metadata[KMIPSecretStore.KEY_UUID])
 
@@ -321,8 +310,6 @@ class KMIPSecretStore(ss.SecretStoreBase):
         :param key_spec: KeySpec for secret to be generates
         :returns: boolean indicating if secret can be generated
         """
-        print "CALLING GENERATE SUPPORTS"
-
         alg_dict_entry = self.valid_alg_dict.get(key_spec.alg.lower())
         if (alg_dict_entry and key_spec.bit_length in
                 alg_dict_entry.get(KMIPSecretStore.VALID_BIT_LENGTHS)):
@@ -337,8 +324,6 @@ class KMIPSecretStore(ss.SecretStoreBase):
         {'key_uuid': <uuid of key>}
         :raises: SecretGeneralException
         """
-        print "CALLING DELETE SECRET!!!!!!"
-
         LOG.debug("Starting secret deletion with KMIP plugin")
         uuid = str(secret_metadata[KMIPSecretStore.KEY_UUID])
 
@@ -368,9 +353,7 @@ class KMIPSecretStore(ss.SecretStoreBase):
         :param key_spec: KeySpec of secret to be stored
         :returns: boolean indicating if secret can be stored
         """
-        print "CALLING STORE SECRET SUPPORTS"
-	key_type = ss.KeyAlgorithm().get_secret_type(key_spec.alg.lower())
-	print "Key Type "+key_type
+        key_type = ss.KeyAlgorithm().get_secret_type(key_spec.alg.lower())
         if key_type is None or self._map_type_ss_to_kmip(key_type) is None:
             return False
         return self.generate_supports(key_spec)
@@ -505,7 +488,7 @@ class KMIPSecretStore(ss.SecretStoreBase):
     def _raise_secret_general_exception(self, result):
         msg = "Status: {0}, Reason: {1}, Message: {2}".format(
             result.result_status,
-            result.result_reason,result.result_message)
-	LOG.debug("ERROR from KMIP server: %s", msg)
-	raise ss.SecretGeneralException(msg)
-
+            result.result_reason,
+            result.result_message)
+        LOG.debug("ERROR from KMIP server: %s", msg)
+        raise ss.SecretGeneralException(msg)
